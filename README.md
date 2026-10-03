@@ -1,6 +1,6 @@
 # Air Over China
 
-![Yesterday's US air quality over China, drawn as one solid map]out/plot.png
+![Yesterday's US air quality over China, drawn as one solid map](out/plot.png)
 
 ## The phenomenon
 
