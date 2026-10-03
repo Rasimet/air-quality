@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Air over China</title>
+  <style>
+    :root {
+      --bg: #071016;
+      --ink: #d7e6ea;
+      --dim: #7f97a1;
+      --line: rgba(72, 214, 205, 0.55);
+    }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
+    canvas { display: block; width: 100%; height: 100%; }
+    body::before {
+      content: "";
+      position: fixed; inset: 0; pointer-events: none; z-index: 1;
+      background-image:
+        linear-gradient(rgba(72, 214, 205, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(72, 214, 205, 0.05) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(circle at 50% 46%, #000 30%, transparent 78%);
+    }
+    .frame {
+      position: fixed; inset: 18px; z-index: 2; pointer-events: none;
+      border: 1px solid rgba(72, 214, 205, 0.18);
+    }
+    .frame span {
+      position: absolute; width: 18px; height: 18px; border: 1px solid var(--line);
+    }
+    .frame .a { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+    .frame .b { top: -1px; right: -1px; border-left: 0; border-bottom: 0; }
+    .frame .c { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
+    .frame .d { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+    header, footer, .legend {
+      position: fixed; z-index: 3; pointer-events: none;
+      font-family: "Segoe UI", sans-serif;
+    }
+    header { left: 40px; top: 36px; }
+    header p, footer, .legend { margin: 0; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
+    header h1 { margin: 8px 0 0; font-weight: 400; font-size: 28px; letter-spacing: 0.16em; text-transform: uppercase; }
+    header .date { margin-top: 8px; color: #9fe9e2; letter-spacing: 0.22em; }
+    footer { left: 40px; bottom: 36px; }
+    .legend {
+      right: 48px; top: 50%; transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+      letter-spacing: 0.08em; padding-right: 0.4em;
+    }
+    .legend i { display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: -1px; }
+  </style>
+</head>
+<body>
+  <div class="frame"><span class="a"></span><span class="b"></span><span class="c"></span><span class="d"></span></div>
+  <header>
+    <p>Open-Meteo · Cams global</p>
+    <h1>Air over China</h1>
+    <p class="date" id="date"></p>
+  </header>
+  <footer>Drag to orbit</footer>
+  <div class="legend" id="legend"></div>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+
+    const COS = Math.cos(35 * Math.PI / 180);
+    const ORIGIN_LON = 104;
+    const ORIGIN_LAT = 36;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color("#071016");
+    scene.fog = new THREE.Fog("#071016", 90, 180);
+    const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.1, 400);
+    camera.position.set(0, 46, 64);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enablePan = false;
+    controls.target.set(0, 0, 0);
+    controls.update();
+
+    scene.add(new THREE.AmbientLight("#9fd4dc", 0.35));
+    const key = new THREE.DirectionalLight("#f4fffe", 1.15);
+    key.position.set(-28, 46, 30);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight("#48d6cd", 0.85);
+    rim.position.set(24, 12, -36);
+    scene.add(rim);
+
+    const grid = new THREE.GridHelper(160, 40, "#16343a", "#10262c");
+    grid.position.y = -2.2;
+    scene.add(grid);
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(34, 34.25, 96),
+      new THREE.MeshBasicMaterial({ color: "#48d6cd", transparent: true, opacity: 0.45, side: THREE.DoubleSide }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = -1.7;
+    scene.add(ring);
+
+    function project(lon, lat) {
+      return [(lon - ORIGIN_LON) * COS, lat - ORIGIN_LAT];
+    }
+
+    function shapeFromRings(rings) {
+      const shape = new THREE.Shape();
+      rings.forEach((ring, index) => {
+        const path = index === 0 ? shape : new THREE.Path();
+        ring.forEach(([lon, lat], i) => {
+          const [x, y] = project(lon, lat);
+          if (i === 0) path.moveTo(x, y);
+          else path.lineTo(x, y);
+        });
+        if (index > 0) shape.holes.push(path);
+      });
+      return shape;
+    }
+
+    const [data, land, provinces] = await Promise.all([
+      fetch("./cells.json", { cache: "no-store" }).then((reply) => reply.json()),
+      fetch("./land.json", { cache: "no-store" }).then((reply) => reply.json()),
+      fetch("../data/china-provinces.geojson", { cache: "no-store" }).then((reply) => reply.json()),
+    ]);
+    document.getElementById("date").textContent = data.pretty;
+    document.getElementById("legend").innerHTML = data.labels.map((label, i) =>
+      `<span><i style="background:${data.colours[i]}"></i>${label}</span>`
+    ).join("");
+
+    const stops = [0, 50, 100, 150, 200, 300];
+    const ramp = data.colours.map((hex) => new THREE.Color(hex));
+    function colorFor(aqi) {
+      const value = Math.max(0, Math.min(300, aqi));
+      let index = 0;
+      while (index < stops.length - 2 && value > stops[index + 1]) index += 1;
+      const span = stops[index + 1] - stops[index];
+      const mix = span === 0 ? 0 : (value - stops[index]) / span;
+      return ramp[index].clone().lerp(ramp[index + 1], mix);
+    }
+
+    const samples = data.cells.map((cell) => {
+      const ring = cell.rings[0];
+      let lon = 0;
+      let lat = 0;
+      for (const point of ring) {
+        lon += point[0];
+        lat += point[1];
+      }
+      const [x, y] = project(lon / ring.length, lat / ring.length);
+      return [x, y, cell.aqi];
+    });
+    const binSize = 2;
+    const bins = new Map();
+    for (const sample of samples) {
+      const key = `${Math.floor(sample[0] / binSize)},${Math.floor(sample[1] / binSize)}`;
+      if (!bins.has(key)) bins.set(key, []);
+      bins.get(key).push(sample);
+    }
+
+    const minX = project(73, 36)[0];
+    const maxX = project(136, 36)[0];
+    const minY = project(104, 17)[1];
+    const maxY = project(104, 54)[1];
+    const width = 640;
+    const height = 380;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const pixels = canvas.getContext("2d").createImageData(width, height);
+    for (let row = 0; row < height; row += 1) {
+      const y = maxY - (row / (height - 1)) * (maxY - minY);
+      for (let col = 0; col < width; col += 1) {
+        const x = minX + (col / (width - 1)) * (maxX - minX);
+        let weight = 0;
+        let total = 0;
+        const cx = Math.floor(x / binSize);
+        const cy = Math.floor(y / binSize);
+        for (let iy = cy - 2; iy <= cy + 2; iy += 1) {
+          for (let ix = cx - 2; ix <= cx + 2; ix += 1) {
+            const nearby = bins.get(`${ix},${iy}`);
+            if (!nearby) continue;
+            for (const [sx, sy, aqi] of nearby) {
+              const distance = (x - sx) ** 2 + (y - sy) ** 2;
+              if (distance > 36) continue;
+              const influence = Math.exp(-distance / 8);
+              weight += influence;
+              total += influence * aqi;
+            }
+          }
+        }
+        const color = colorFor(weight ? total / weight : 40);
+        const offset = (row * width + col) * 4;
+        pixels.data[offset] = Math.round(color.r * 255);
+        pixels.data[offset + 1] = Math.round(color.g * 255);
+        pixels.data[offset + 2] = Math.round(color.b * 255);
+        pixels.data[offset + 3] = 255;
+      }
+    }
+    canvas.getContext("2d").putImageData(pixels, 0, 0);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    const pieces = land.polygons.map((rings) => {
+      const geometry = new THREE.ExtrudeGeometry(shapeFromRings(rings), {
+        depth: 1.15,
+        bevelEnabled: false,
+      });
+      const position = geometry.attributes.position;
+      const uv = new Float32Array(position.count * 2);
+      for (let vertex = 0; vertex < position.count; vertex += 1) {
+        uv[vertex * 2] = (position.getX(vertex) - minX) / (maxX - minX);
+        uv[vertex * 2 + 1] = (position.getY(vertex) - minY) / (maxY - minY);
+      }
+      geometry.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+      geometry.rotateX(-Math.PI / 2);
+      return geometry;
+    });
+    const merged = mergeGeometries(pieces, false);
+    pieces.forEach((geometry) => geometry.dispose());
+    const depth = 1.15;
+    scene.add(new THREE.Mesh(merged, new THREE.MeshStandardMaterial({
+      map: texture,
+      emissiveMap: texture,
+      emissive: "#ffffff",
+      emissiveIntensity: 0.65,
+      roughness: 0.9,
+      metalness: 0,
+      fog: false,
+    })));
+
+    const border = [];
+    function addRing(coords) {
+      for (let i = 0; i < coords.length - 1; i += 1) {
+        const [lon1, lat1] = coords[i];
+        const [lon2, lat2] = coords[i + 1];
+        if (lat1 < 17 || lat1 > 54 || lat2 < 17 || lat2 > 54) continue;
+        if (lon1 < 73 || lon1 > 136 || lon2 < 73 || lon2 > 136) continue;
+        const [x1, y1] = project(lon1, lat1);
+        const [x2, y2] = project(lon2, lat2);
+        border.push(x1, depth + 0.05, -y1, x2, depth + 0.05, -y2);
+      }
+    }
+    for (const feature of provinces.features) {
+      const geometry = feature.geometry;
+      const polygons = geometry.type === "Polygon" ? [geometry.coordinates]
+        : geometry.type === "MultiPolygon" ? geometry.coordinates : [];
+      for (const polygon of polygons) {
+        for (const ring of polygon) addRing(ring);
+      }
+    }
+    const lines = new THREE.BufferGeometry();
+    lines.setAttribute("position", new THREE.Float32BufferAttribute(border, 3));
+    scene.add(new THREE.LineSegments(lines, new THREE.LineBasicMaterial({
+      color: "#e7f4f1",
+      fog: false,
+    })));
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    renderer.setAnimationLoop(() => {
+      controls.update();
+      renderer.render(scene, camera);
+    });
+  </script>
+</body>
+</html>
