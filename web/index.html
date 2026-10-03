@@ -135,7 +135,6 @@
       fetch("./land.json", { cache: "no-store" }).then((reply) => reply.json()),
       fetch("../data/china-provinces.geojson", { cache: "no-store" }).then((reply) => reply.json()),
     ]);
-    data.colours = ["#6f9e99", "#84959b", "#a89878", "#a48474", "#9a727a", "#8d636c"];
     document.getElementById("date").textContent = data.pretty;
     document.getElementById("legend").innerHTML = data.labels.map((label, i) =>
       `<span><i style="background:${data.colours[i]}"></i>${label}</span>`

@@ -28,7 +28,20 @@ you know what you did. -->
 
 ## Run it
 
+Build yesterday’s air-quality data for the page. “Yesterday” is the day before you run the command. If that file is already in `data/`, it is reused.
+
 ```
-uv run fetch.py
-uv run plot.py
+uv run web.py
+```
+
+Serve the page, then open http://127.0.0.1:8765/web/index.html . Drag the map to turn it. After another `uv run web.py`, refresh the page.
+
+```
+python -m http.server 8765
+```
+
+Save a still of that page to `out/plot.png`. The server has to be running, and the map needs a few seconds to appear.
+
+```
+uv run shot.py
 ```
