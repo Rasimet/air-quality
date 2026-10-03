@@ -1,30 +1,18 @@
-# The phenomenon
+# Air Over China
 
-<!-- This is the SD5913 assignment 2 template. Everything in this file is yours to
-replace, and the check counts words: comments like this one are not words, so
-delete each one as you write. Start with the heading: name the phenomenon.
-
-Then, in this order, at least 150 words in total.
-
-New to folders, paths, or the files here whose names start with a dot? Read
-https://github.com/sd5913/pfad/blob/2026/reference/files.md first. Ten minutes. -->
-
-![what the picture is](out/plot.png)
+![Yesterday's US air quality over China, drawn as one solid map](out/plot.png)
 
 ## The phenomenon
 
-<!-- What goes up and down, and why you looked at it. -->
+Air quality over China changes from hour to hour and from place to place. The number used here is the United States Air Quality Index, a single score that takes the worst of several pollutants. A low score is easier to breathe; a high score means the air is unhealthy. I looked at it because the same country can be clean in one province and poor in another on the same day, and a map shows that contrast more clearly than a list of cities.
 
 ## The source
 
-<!-- A link to the page or endpoint the file came from, and one line on what is in
-the file: how many rows, what a row means, what the units are. -->
+The numbers come from the [Open-Meteo Air Quality API](https://open-meteo.com/en/docs/air-quality-api), using the global CAMS model: `https://air-quality-api.open-meteo.com/v1/air-quality`. The script asks for the day before it is run. It requests hourly `us_aqi` on a 1° grid from 18°N to 54°N and 73°E to 135°E, 2331 locations in all. The saved file is `data/open-meteo-china-us-aqi-YYYY-MM-DD.jsonl`. Each line is one raw API reply. Each location in that reply is one grid point and 24 hourly index values. The unit of `us_aqi` is the US AQI. Provincial outlines come from the [Aliyun DataV China map](https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json), saved as `data/china-provinces.geojson`.
 
 ## What the picture shows
 
-<!-- Two or three sentences. Including what it hides: every transformation throws
-something away, and naming what yours threw away is the easiest way to sound like
-you know what you did. -->
+The still in `out/plot.png` is the same view as the page: one solid map of China, coloured by yesterday's air, with provincial borders drawn on top. Green-grey is cleaner air and the warmer brown is worse air, often over the north and east. The picture keeps only the mean of the 24 hours, so the rise and fall inside the day is gone. Neighbouring grid points are blended into one continuous surface, so the original 1° blocks and their hard edges are gone too. Points over the sea, and pieces of land too small to keep, are left out.
 
 ## Run it
 
